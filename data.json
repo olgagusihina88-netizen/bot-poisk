@@ -1,38 +1,62 @@
 [
   {
     "id": 1,
-    "business_name": "Цветочный рай",
+    "business_name": "Цветоград",
     "category": "цветы",
     "city": "Тюмень",
-    "district": "Центральный",
-    "description": "Букет из 101 розы с доставкой",
-    "price": 3500,
-    "rating": 4.8,
+    "district": "Калининский",
+    "description": "5 французских роз",
+    "price": 1945,
+    "rating": 4.6,
     "paid_until": "2025-06-01",
-    "link": "https://cveti-rai.ru"
+    "link": "cvetgorod72.ru"
   },
   {
     "id": 2,
-    "business_name": "Флора-маркет",
+    "business_name": "Между Нами",
     "category": "цветы",
     "city": "Тюмень",
     "district": "Восточный",
-    "description": "Скидка 20% на букеты невесты",
-    "price": 4200,
-    "rating": 4.5,
+    "description": "Букет из 9 альстромерий",
+    "price": 2790,
+    "rating": 5.0,
     "paid_until": "",
-    "link": "https://flora-tmn.ru"
+    "link": "max.ru/id723005240740_bot"
   },
   {
     "id": 3,
-    "business_name": "Букет24",
+    "business_name": "Вистерия Гарден",
     "category": "цветы",
     "city": "Тюмень",
-    "district": "Центральный",
-    "description": "Тюльпаны по 90 руб за штуку",
-    "price": 90,
-    "rating": 4.2,
+    "district": "Восточный",
+    "description": "Готовый букет от 1100",
+    "price": 1100,
+    "rating": 5.0,
     "paid_until": "2025-05-15",
-    "link": "https://buket24.ru"
+    "link": "wisteriagarden.posiflora.com"
+  }
+ {
+    "id": 4,
+    "business_name": "21",
+    "category": "маникюр","педикюр",
+    "city": "Тюмень",
+    "district": "Центральный",
+    "description": "маникюр и педикюр с покрытием гель-лак всего за 3990 р. только до конца марта!",
+    "price": 3990,
+    "rating": 5.0,
+    "paid_until": "2026-03-30",
+    "link": "https://vk.com/club219953296"
+  }
+  {
+    "id": 5,
+    "business_name": "LITTLE FRIDAY",
+    "category": "маникюр",
+    "city": "Тюмень",
+    "district": "Калининский",
+    "description": "Маникюр и педикюр с покрытием 2480",
+    "price": 2480,
+    "rating": 4.8,
+    "paid_until": "2026-03-30",
+    "link": "https://vk.com/littlefriday_tyumen"
   }
 ]
