@@ -10,11 +10,13 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
+# Загружаем переменные окружения
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# Путь к файлу с данными
 JSON_PATH = "data.json"
 
 bot = Bot(token=BOT_TOKEN)
@@ -22,63 +24,91 @@ storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
+# Определяем состояния для FSM
 class SearchStates(StatesGroup):
-    waiting_for_query = State()
-    waiting_for_city = State()
-    waiting_for_district = State()
+    waiting_for_city = State()      # ждём город
+    waiting_for_district = State()   # ждём район
 
+# Функция загрузки данных из JSON
 def load_data():
-    with open(JSON_PATH, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    try:
+        with open(JSON_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Ошибка загрузки JSON: {e}")
+        return []
 
-@dp.message(Command("start"))
-async def cmd_start(message: types.Message, state: FSMContext):
-    await message.reply("Привет! Я помогу найти лучшие предложения. Напиши, что ищешь (например, 'цветы').")
-    await state.set_state(SearchStates.waiting_for_query)
+# Хендлер на любое сообщение (не команда)
+@dp.message()
+async def handle_any_message(message: types.Message, state: FSMContext):
+    # Проверяем, находится ли пользователь уже в каком-то состоянии
+    current_state = await state.get_state()
+    if current_state is None:
+        # Пользователь не в диалоге – начинаем новый поиск
+        query = message.text.strip().lower()
+        if not query:
+            await message.reply("Пожалуйста, напишите, что ищете (например, 'цветы').")
+            return
+        # Сохраняем запрос
+        await state.update_data(query=query)
+        await message.reply("В каком городе ищем?")
+        await state.set_state(SearchStates.waiting_for_city)
+    else:
+        # Если состояние уже есть – ничего не делаем, обработчики состояний сработают сами
+        pass
 
-@dp.message(SearchStates.waiting_for_query)
-async def process_query(message: types.Message, state: FSMContext):
-    await state.update_data(query=message.text.strip().lower())
-    await message.reply("В каком городе ищем?")
-    await state.set_state(SearchStates.waiting_for_city)
-
+# Хендлер для состояния ожидания города
 @dp.message(SearchStates.waiting_for_city)
 async def process_city(message: types.Message, state: FSMContext):
-    await state.update_data(city=message.text.strip().lower())
-    await message.reply("Укажите район (или отправьте '-', если не важно):")
+    city = message.text.strip().lower()
+    if not city:
+        await message.reply("Пожалуйста, укажите город.")
+        return
+    await state.update_data(city=city)
+    await message.reply("Укажите район (или напишите 'любой', если не важно):")
     await state.set_state(SearchStates.waiting_for_district)
 
+# Хендлер для состояния ожидания района
 @dp.message(SearchStates.waiting_for_district)
 async def process_district(message: types.Message, state: FSMContext):
-    district_input = message.text.strip()
-    district = None if district_input == '-' else district_input.lower()
+    district_input = message.text.strip().lower()
+    # Если пользователь ввёл "любой", "нет", "-", считаем, что район не важен
+    skip_keywords = ["любой", "нет", "-", "pass", "не важно"]
+    if district_input in skip_keywords:
+        district = None
+    else:
+        district = district_input
 
+    # Получаем сохранённые данные
     data = await state.get_data()
     query = data['query']
     city = data['city']
 
-    try:
-        items = load_data()
-    except Exception as e:
-        await message.reply("Ошибка загрузки данных. Попробуйте позже.")
+    # Загружаем все записи из JSON
+    items = load_data()
+    if not items:
+        await message.reply("Ошибка загрузки базы данных. Попробуйте позже.")
         await state.clear()
         return
 
-    filtered = [item for item in items if 
-                query in item.get('category', '').lower() or 
+    # Фильтруем по категории или названию (запрос)
+    filtered = [item for item in items if
+                query in item.get('category', '').lower() or
                 query in item.get('business_name', '').lower()]
 
     if not filtered:
-        await message.reply("Ничего не найдено по вашему запросу.")
+        await message.reply("По вашему запросу ничего не найдено.")
         await state.clear()
         return
 
+    # Фильтруем по городу
     city_filtered = [item for item in filtered if item.get('city', '').lower() == city]
     if not city_filtered:
         await message.reply(f"В городе {city} ничего не найдено.")
         await state.clear()
         return
 
+    # Если указан район, фильтруем по нему, иначе оставляем все по городу
     if district:
         district_filtered = [item for item in city_filtered if item.get('district', '').lower() == district]
         if district_filtered:
@@ -89,6 +119,7 @@ async def process_district(message: types.Message, state: FSMContext):
     else:
         results = city_filtered
 
+    # Сортируем: сначала платные (paid_until > сегодня), потом по рейтингу
     today = datetime.now().date().isoformat()
     paid = [item for item in results if item.get('paid_until') and item['paid_until'] > today]
     unpaid = [item for item in results if not (item.get('paid_until') and item['paid_until'] > today)]
@@ -96,6 +127,7 @@ async def process_district(message: types.Message, state: FSMContext):
     unpaid.sort(key=lambda x: x.get('rating', 0), reverse=True)
     sorted_results = paid + unpaid
 
+    # Берём топ-5 кандидатов для анализа
     candidates = sorted_results[:5]
 
     if not candidates:
@@ -103,6 +135,7 @@ async def process_district(message: types.Message, state: FSMContext):
         await state.clear()
         return
 
+    # Формируем промпт для OpenAI
     prompt = f"Пользователь ищет: {query} в городе {city}"
     if district:
         prompt += f", район {district}.\n"
@@ -124,6 +157,7 @@ async def process_district(message: types.Message, state: FSMContext):
         )
         answer = response.choices[0].message.content
     except Exception as e:
+        # Если OpenAI недоступен, выдаём простой список
         answer = "Вот что нашлось (без анализа ИИ):\n\n"
         for item in candidates[:3]:
             answer += f"🏆 {item['business_name']}\n📝 {item['description']}\n💰 {item['price']} руб\n⭐ {item.get('rating', '—')}\n🔗 {item['link']}\n\n"
@@ -131,7 +165,16 @@ async def process_district(message: types.Message, state: FSMContext):
     await message.reply(answer)
     await state.clear()
 
+# Команда /start (оставим для справки)
+@dp.message(Command("start"))
+async def cmd_start(message: types.Message, state: FSMContext):
+    await state.clear()  # сбрасываем состояние
+    await message.reply("Привет! Просто напишите, что ищете (например, 'цветы').")
+
+# Запуск бота
 async def main():
+    # Сбрасываем вебхук при старте (на всякий случай)
+    await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
