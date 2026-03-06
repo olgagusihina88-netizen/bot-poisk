@@ -1,0 +1,38 @@
+[
+  {
+    "id": 1,
+    "business_name": "Цветочный рай",
+    "category": "цветы",
+    "city": "Тюмень",
+    "district": "Центральный",
+    "description": "Букет из 101 розы с доставкой",
+    "price": 3500,
+    "rating": 4.8,
+    "paid_until": "2025-06-01",
+    "link": "https://cveti-rai.ru"
+  },
+  {
+    "id": 2,
+    "business_name": "Флора-маркет",
+    "category": "цветы",
+    "city": "Тюмень",
+    "district": "Восточный",
+    "description": "Скидка 20% на букеты невесты",
+    "price": 4200,
+    "rating": 4.5,
+    "paid_until": "",
+    "link": "https://flora-tmn.ru"
+  },
+  {
+    "id": 3,
+    "business_name": "Букет24",
+    "category": "цветы",
+    "city": "Тюмень",
+    "district": "Центральный",
+    "description": "Тюльпаны по 90 руб за штуку",
+    "price": 90,
+    "rating": 4.2,
+    "paid_until": "2025-05-15",
+    "link": "https://buket24.ru"
+  }
+]
